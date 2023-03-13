@@ -43,6 +43,6 @@ jobs:
           sam deploy --guided \
           --region us-east-1 \
           --stack-name ${{ env.STACK_NAME}} \
-          --s3_prefix ${{ env.S3_PREFIX }}  \
+          --s3-prefix ${{ env.S3_PREFIX }}  \
           --parameter-overrides "Environment=${{ env.PARAMETER_OVERRIDES_ENVIRONMENT }}" "StackTagName=${{ env.PARAMETER_OVERRIDES_STACKTAGNAME }}" \
       
