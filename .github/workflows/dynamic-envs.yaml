@@ -1,0 +1,48 @@
+name: Dynamic Envs Pipeline
+
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - synchronize
+      - closed
+      - reopened
+      
+    branches:
+      - "master"
+      
+env:
+  ENVIRONMENT_NAME: ${github.ref_name}
+  TABLE_HEADER: $ENVIRONMENT_NAME.deploy.parameters
+  STACK_NAME: "test-$ENVIRONMENT_NAME"
+  REGION: "us-east-1"
+  S3_PREFIX: "$ENVIRONMENT_NAME-onthefly"
+  PARAMETER_OVERRIDES_ENVIRONMENT: $ENVIRONMENT_NAME
+  PARAMETER_OVERRIDES_STACKTAGNAME: "test-$ENVIRONMENT_NAME"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: |
+          echo "Tests are here"
+          echo $GITHUB_REF
+          echo $GITHUB_HEAD_REF
+          # trigger the tests here
+
+  create-environment:
+    needs: [test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+      - uses: aws-actions/setup-sam@v2
+      - run: |
+          sam deploy --guided \
+          --region us-east-1 \
+          --stack-name ${{ env.STACK_NAME}} \
+          --s3_prefix ${{ env.S3_PREFIX }}  \
+          --parameter-overrides "Environment=${{ env.PARAMETER_OVERRIDES_ENVIRONMENT }}" "StackTagName=${{ env.PARAMETER_OVERRIDES_STACKTAGNAME }}" \
+      
