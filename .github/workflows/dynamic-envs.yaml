@@ -1,6 +1,6 @@
 name: Dynamic Envs Pipeline
 
-on:
+on: 
   pull_request:
     types:
       - opened
@@ -11,15 +11,6 @@ on:
       
     branches:
       - "master"
-      
-env:
-  ENVIRONMENT_NAME: ${github.ref_name}
-  TABLE_HEADER: $ENVIRONMENT_NAME.deploy.parameters
-  STACK_NAME: "test-$ENVIRONMENT_NAME"
-  REGION: "us-east-1"
-  S3_PREFIX: "$ENVIRONMENT_NAME-onthefly"
-  PARAMETER_OVERRIDES_ENVIRONMENT: $ENVIRONMENT_NAME
-  PARAMETER_OVERRIDES_STACKTAGNAME: "test-$ENVIRONMENT_NAME"
 
 jobs:
   test:
@@ -36,13 +27,48 @@ jobs:
     needs: [test]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
-      - uses: aws-actions/setup-sam@v2
-      - run: |
-          sam deploy --guided \
-          --region us-east-1 \
-          --stack-name ${{ env.STACK_NAME}} \
-          --s3-prefix ${{ env.S3_PREFIX }}  \
-          --parameter-overrides "Environment=${{ env.PARAMETER_OVERRIDES_ENVIRONMENT }}" "StackTagName=${{ env.PARAMETER_OVERRIDES_STACKTAGNAME }}" \
-      
+      - name: Create temporary configuration file
+        run: |
+          BRANCH_NAME=$(echo ${GITHUB_HEAD_REF#refs/heads/} | sed 's/[^a-zA-Z0-9]/-/g' | tr '[:upper:]' '[:lower:]')
+          echo "Branch name: $BRANCH_NAME"
+
+          export ENVIRONMENT_NAME=$BRANCH_NAME
+          export STACK_NAME="banking-microservicetest-$ENVIRONMENT_NAME"
+          export REGION="eu-west-1"
+          export S3_PREFIX="$ENVIRONMENT_NAME-ontheflytest"
+          export PARAMETER_OVERRIDES_ENVIRONMENT=$ENVIRONMENT_NAME
+          export PARAMETER_OVERRIDES_STACKTAGNAME="banking-treezortest-$ENVIRONMENT_NAME"
+          
+          cat > samconfigtemp.toml << EOF
+          version = 0.1
+
+          [$ENVIRONMENT_NAME.deploy.parameters]
+          stack_name = "$STACK_NAME"
+          region = "$REGION"
+          confirm_changeset = true
+          capabilities = "CAPABILITY_AUTO_EXPAND CAPABILITY_IAM CAPABILITY_NAMED_IAM"
+          image_repositories = []
+          disable_rollback = true
+          s3_bucket = "coinhousetest-banking-onthefly-euw1"
+          s3_prefix = "$S3_PREFIX"
+          parameter_overrides = [
+              "Environment=$PARAMETER_OVERRIDES_ENVIRONMENT",
+              "MonolithVpceId=dummy",
+              "MonolithRoles=dummy",
+              "StackTagName=$PARAMETER_OVERRIDES_STACKTAGNAME"
+          ]  
+          EOF
+
+  destroy:
+    runs-on: ubuntu-latest
+    if: github.event.action == 'closed' && github.event.pull_request.merged == true
+    steps:
+      - name: Destroy environment
+        run: |
+          # Replace "my_environment_name" with the name of your environment
+          $ENVIRONMENT_NAME=$(echo "${{ github.event.pull_request.head.ref }}" | tr / _)
+
+          sam delete --stack-name $ENVIRONMENT_NAME
+
+          echo "Environment $ENVIRONMENT_NAME has been destroyed"
+
