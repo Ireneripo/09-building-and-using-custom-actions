@@ -65,5 +65,6 @@ jobs:
     steps:
       - name: Destroy environment
         run: |
-          echo "Stack has been destroyed"
+          echo "Stack has been destroyed" 
+          
 
