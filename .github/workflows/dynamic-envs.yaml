@@ -65,10 +65,5 @@ jobs:
     steps:
       - name: Destroy environment
         run: |
-          # Replace "my_environment_name" with the name of your environment
-          $ENVIRONMENT_NAME=$(echo "${{ github.event.pull_request.head.ref }}" | tr / _)
-
-          sam delete --stack-name $ENVIRONMENT_NAME
-
-          echo "Environment $ENVIRONMENT_NAME has been destroyed"
+          echo "Stack has been destroyed"
 
