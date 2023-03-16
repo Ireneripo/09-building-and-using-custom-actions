@@ -60,8 +60,9 @@ jobs:
           EOF
 
   destroy:
+    needs: [create-environment]
     runs-on: ubuntu-latest
-    if: github.event.action == 'closed' || github.event.pull_request.merged == true
+    if: github.event.action == 'closed' && github.event.pull_request.merged == true
     steps:
       - name: Destroy environment
         run: |
